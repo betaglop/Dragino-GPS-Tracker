@@ -1,16 +1,19 @@
 function Decoder(bytes, port) {
+  var position = {
+      Latitude: 
+        (bytes[0]<<24 | bytes[1]<<16 | bytes[2]<<8 | bytes[3]) / 1000000,
+      Longitude:
+        (bytes[4]<<24 | bytes[5]<<16 | bytes[6]<<8 | bytes[7]) / 1000000
+  };
+  position.jumpOnMap = 'http://www.openstreetmap.org/?mlat='+position.Latitude+'&mlon='+position.Longitude+'&zoom=17';
+
   var json = {
     // GPS coordinates; signed 32 bits integer, MSB; unit: Â°
     // When power is low (<2.84v), GPS wonâ€™t be able to get location
     // info and GPS feature will be disabled and the location field
     // will be filled with 0x0FFFFFFF, 0x0FFFFFFF. 
-	
-    Latitude: 
-      (bytes[0]<<24 | bytes[1]<<16 | bytes[2]<<8 | bytes[3]) / 1000000,
-	  
-    Longitude:
-      (bytes[4]<<24 | bytes[5]<<16 | bytes[6]<<8 | bytes[7]) / 1000000,
-
+    
+    Position: position,
 
     // Alarm status: boolean
     Alarm: (bytes[8] & 0x40) > 0,
