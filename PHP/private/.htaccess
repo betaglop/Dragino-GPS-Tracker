@@ -1,0 +1,5 @@
+AuthName "Accès restreint, merci de vous authentifier"
+AuthType Basic
+AuthUserFile "/var/www/www.e-glop.net/gps/private/.htpasswd"
+Require valid-user
+
