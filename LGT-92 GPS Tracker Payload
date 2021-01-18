@@ -1,5 +1,5 @@
 function Decoder(bytes, port) {
-  return {
+  var json = {
     // GPS coordinates; signed 32 bits integer, MSB; unit: Â°
     // When power is low (<2.84v), GPS wonâ€™t be able to get location
     // info and GPS feature will be disabled and the location field
@@ -13,13 +13,13 @@ function Decoder(bytes, port) {
 
 
     // Alarm status: boolean
-    ALARM_status: (bytes[8] & 0x40) > 0,
+    Alarm: (bytes[8] & 0x40) > 0,
 
     // Battery; 14 bits; unit: V
     BatV: ((bytes[8] & 0x3f)<<8 | bytes[9]) / 1000,
 
     // Motion detection mode; 2 bits
-    MD: {
+    MotionDetection: {
       "0": "Disable",
       "1": "Move",
       "2": "Collide",
@@ -27,10 +27,10 @@ function Decoder(bytes, port) {
     }[bytes[10]>>6],
 
     // LED status for position, uplink and downlink; 1 bit
-    LON: (bytes[10] & 0x20) ? "ON" : "OFF",
+    Led: (bytes[10] & 0x20) ? "ON" : "OFF",
 
     // Firmware version; 5 bits 
-    FW:150+(bytes[10] & 0x1f),
+    Firmware:150+(bytes[10] & 0x1f),
 
     // Roll; signed 16 bits integer, MSB; unit: Â°
 
@@ -44,4 +44,26 @@ function Decoder(bytes, port) {
 
     Pitch: (bytes[13]<<24>>16 | bytes[14]) / 100,
   };
+  
+  
+  if ( json.BatV > 4 ) {
+    json.BatCharge = '80-100%';
+  }
+  else if ( json.BatV > 3.85 ) {
+    json.BatCharge = '60-80%'
+  }
+  else if ( json.BatV >= 3.85 ) {
+    json.BatCharge = '60-80%'
+  }
+  else if ( json.BatV >= 3.70 ) {
+    json.BatCharge = '40-60%'
+  }
+  else if ( json.BatV >= 3.40 ) {
+    json.BatCharge = '20-40%'
+  }
+  else {
+    json.BatCharge = '0-20%'
+  }
+  
+  return json;
 }
