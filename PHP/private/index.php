@@ -26,25 +26,33 @@
   </style>
 </head>
 <body>
-    <?php foreach ( $devices as $device => $data ): ?>
-    <h1><?php echo $device ?></h1>
-    <div id="<?php echo $device ?>" class="map"></div>
+    <h1></h1>
+    <div id="map" class="map"></div>
     <script type="text/javascript">
-        var points = {<?php
-            foreach ( $data as $date => $point ) {
-                $date = preg_replace(['/T/', '/\..*$/'], [' ', ''], $date).' UTC';
-                if ( $point['Position']['Latitude'] == 0 && $point['Position']['Longitude'] == 0 ) {
-                    continue;
+        var colors = ['lightblue', 'lightgreen', 'orange', 'gray', 'pink'];
+        var points = [];
+        points.push({<?php
+            foreach ( $devices as $device => $data ) {
+                foreach ( $data as $date => $point ) {
+                    $date = preg_replace(['/T/', '/\..*$/'], [' ', ''], $date).' UTC';
+                    if ( $point['Position']['Latitude'] == 0 && $point['Position']['Longitude'] == 0 ) {
+                        continue;
+                    }
+                    if ( strtotime($date) < strtotime($PERIOD.' ago') ) {
+                        continue;
+                    }
+                    foreach ( ['BatCharge', 'MotionDetection', 'Alarm'] as $key ) {
+                        if ( !array_key_exists($key, $point) ) {
+                            $point[$key] = '';
+                        }
+                    }
+                    echo '"'.$date.'":{ lat: '.$point['Position']['Latitude'].', lon: '.$point['Position']['Longitude'].', comment: "Date et heure: '.date('H:i:s',strtotime($date)).', Device: '.$device.', Charge: '.$point['BatCharge'].', Mouvement: '.$point['MotionDetection'].', Alarme: '.$point['Alarm'].'" },'."\n";
                 }
-                if ( strtotime($date) < strtotime($PERIOD.' ago') ) {
-                    continue;
-                }
-                echo '"'.$date.'":{ lat: '.$point['Position']['Latitude'].', lon: '.$point['Position']['Longitude'].', comment: "Date et heure: '.date('H:i:s',strtotime($date)).', Charge: '.$point['BatCharge'].', Mouvement: '.$point['MotionDetection'].', Alarme: '.$point['alarme'].'" },'."\n";
             }
-        ?>};
+        ?>});
         window.onload = function(){
             macarte = L
-                .map('<?php echo $device ?>')
+                .map('map')
                 .setView([<?php echo $point['Position']['Latitude'] ?>, <?php echo $point['Position']['Longitude'] ?>], 16)
             ;
             L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
@@ -53,26 +61,35 @@
                 maxZoom: 18
             }).addTo(macarte);
             
-            var markers = [];
-            var size = 5;
-            for (point in points) {
-                size += 1;
-                var marker = L.marker( [points[point].lat, points[point].lon], { icon: L.icon({
-                    iconSize: [size, size],
-                    iconUrl: './dog.png',
-                    origin: {x: 256, y: 0},
-                    anchor: {x: "-10px", y: "-32px"}
-                }) } )
-                    .addTo(macarte);
-                marker.bindPopup(points[point].comment);
-                markers.push(marker);
+            var bounds;
+            for ( i in points ) {
+                var latlngs = [];
+                var size = 5;
+                for ( point in points[i] ) {
+                    size++;
+                    var marker = L.marker(
+                        [points[i][point].lat, points[i][point].lon], { icon: L.icon({
+                            iconSize: [size, size],
+                            iconUrl: './dog.png',
+                            origin: {x: 256, y: 0},
+                            anchor: {x: "-10px", y: "-32px"}
+                        }) }
+                    ).addTo(macarte);
+                    latlngs.push(marker.getLatLng());
+                    marker.bindPopup(points[i][point].comment);
+                }
+                // polyline
+                var polyline = L.polyline(latlngs, {color: colors[i]}).addTo(macarte);
+                if ( bounds === undefined ) {
+                    bounds = polyline.getBounds();
+                    continue;
+                }
+                bounds.extend(polyline.getBounds());
             }
             
             // zoom adaptatif
-            var group = new L.featureGroup(markers);
-            macarte.fitBounds(group.getBounds().pad(0.5));
-       };
+            macarte.fitBounds(bounds.pad(1));
+        };
     </script>
-    <?php endforeach ?>
 </body>
 </html>
